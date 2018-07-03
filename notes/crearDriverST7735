@@ -1,0 +1,152 @@
+crear driver ST7735 para STm32F103 Blue pill
+
+Primero copiar y renombrar ST7567 de las carpetas:
+Desde el root de nuttx:
+
+Origen
+./include/nuttx/lcd/st7567.h
+./drivers/lcd/st7567.h
+./drivers/lcd/st7567.c
+./configs/stm32f103-minimum/src/stm32_lcd.c
+
+Destino
+./include/nuttx/lcd/st7735.h
+./drivers/lcd/st7735.h
+./drivers/lcd/st7735.c
+./configs/stm32f103-minimum/src/stm32_st7735.c
+
+Modificar los archivos acorde al dispositivo.
+
+Luego crear la opcion de selección en make menuconfig:
+
+Agregar lo siguiente en drivers/lcd/Kconfig
+
+if LCD_ST7735
+
+config ST7735_SPIMODE
+	int "ST7735 SPI Mode"
+	default 0
+	range 0 3
+	---help---
+		Controls the SPI mode
+
+config ST7735_FREQUENCY
+	int "ST7735 SPI Frequency"
+	default 3500000
+	---help---
+		Define to use a different bus frequency
+
+config ST7735_NINTERFACES
+	int "Number of ST7735 Devices"
+	default 1
+	---help---
+		Specifies the number of physical ST7735 devices that will be
+		supported.  NOTE:  At present, this must be undefined or defined to be 1.
+
+config ST7735_POWER
+	bool "Power control"
+	default n
+	---help---
+		If the hardware supports a controllable LCD a power supply, this
+		configuration should be defined.  In this case the system must
+		provide an interface ug_power().
+
+config ST7735_XRES
+	int "ST7735 X Resolution"
+	default 128
+	---help---
+		Specifies the X resolution of the LCD.
+
+config ST7735_YRES
+	int "ST7735 Y Resolution"
+	default 160
+	---help---
+		Specifies the Y resolution of the LCD.
+
+endif # LCD_ST7735
+
+Añadir en drivers/lcd/Make.defs
+
+ifeq ($(CONFIG_LCD_ST7735),y)
+  CSRCS += st7735.c
+endif
+
+Añadir en configs/stm32f103-minimum/src/Makefile
+
+ifeq ($(CONFIG_LCD_ST7735),y)
+  CSRCS += stm32_st7735.c
+endif
+
+Como este display necesita de control SPI con pin de seleccion CMD/Data,
+se debe definir esto en los siguientes archivos:
+
+en:
+configs/stm32f103-minimum/src/stm32_spi.c
+
+Añadir dentro de:
+
+void stm32_spidev_initialize(void)
+{
+.
+.
+#ifdef CONFIG_LCD_ST7735
+  (void)stm32_configgpio(STM32_LCD_CS);       /* ST7735 chip select */
+#endif
+.
+.
+.
+}
+
+Luego añadir dentro de:
+
+#ifdef CONFIG_STM32_SPI1
+void stm32_spi1select(FAR struct spi_dev_s *dev, uint32_t devid,
+                      bool selected)
+{
+.
+.
+.
+#ifdef CONFIG_LCD_ST7735
+  if (devid == SPIDEV_DISPLAY(0))
+    {
+      stm32_gpiowrite(STM32_LCD_CS, !selected);
+    }
+#endif
+.
+.
+.
+}
+
+Luego añadir dentro de:
+
+#ifdef CONFIG_SPI_CMDDATA
+#ifdef CONFIG_STM32_SPI1
+int stm32_spi1cmddata(FAR struct spi_dev_s *dev, uint32_t devid,
+                      bool cmd)
+{
+.
+.
+.
+.
+#ifdef CONFIG_LCD_ST7735
+  if (devid == SPIDEV_DISPLAY(0))
+    {
+      /*  This is the Data/Command control pad which determines whether the
+       *  data bits are data or a command.
+       */
+
+      (void)stm32_gpiowrite(STM32_LCD_CD, !cmd);
+
+      return OK;
+    }
+#endif
+.
+.
+.
+}
+
+
+
+
+
+

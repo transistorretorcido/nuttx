@@ -1,0 +1,12 @@
+27/06/2018
+
+Portar driver ENC28J60 de fire-stm32v2 hacia STM32F4 Discovery
+
+Primero copiar ENC28J60 de las carpetas:
+Desde el root de nuttx:
+
+Origen
+./configs/fire-stm32v2/src/stm32_enc28j60.c
+
+Destino
+./configs/stm32f4discovery/src/stm32_enc28j60.c

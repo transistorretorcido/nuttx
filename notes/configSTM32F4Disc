@@ -1,0 +1,266 @@
+01/06/18
+*-Config Nuttx para stm32f4discovery
+
+*********************************************************
+Primer flasheo:
+Habilitar consola por UART2
+*********************************************************
+
+en root de nuttx:
+~/nuttx-workspace/nuttx$ make distclean 
+~/nuttx-workspace/nuttx$ tools/configure.sh stm32f4discovery/nsh (para consola NSH por UART2 PA3,PA2)
+~/nuttx-workspace/nuttx$ make menuconfig
+
+En menuconfig:
+ingresar en:
+    ->Build Setup->Build Host Platform-> Linux (seleccionar)
+    return to root
+
+esc & save
+
+~/nuttx-workspace/nuttx$ make
+
+~/openocd/gnu-mcu-eclipse/0.10.0-5-20171110-1117/bin$ ./openocd  -f ../scripts/board/stm32f4discovery.cfg -c init -c "reset halt" -c "flash write_image erase /home/santiago/nuttx-workspace/nuttx/nuttx.bin 0x08000000" -c "reset" -c "exit"
+
+Con lo anterior, abrimos sesión en putty, y por medio del conversor USB-RS232 TTL conectamos a la placa.
+
+Success!
+
+*********************************************************
+Segundo flasheo:
+Habilitar USB host para pendrive
+NO REALIZAR MAKE DISTCLEAN
+*********************************************************
+
+~/nuttx-workspace/nuttx$ make menuconfig
+
+En menuconfig:
+ingresar en:
+    ->System Type->STM32 Peripheral Support-> OTG FS (seleccionar)
+    return to root
+ingresar en:
+    ->RTOS Features->RTOS Hooks->Custom board/driver initialization (seleccionar)
+    (esc)
+    ->RTOS Features->Work Queue support->High Prority (kernel) worker thread(seleccionar)
+    return o root
+ingresar en:
+    ->Devices drivers->USB Host Driver support (seleccionar)
+    ->Devices drivers->USB Host Driver support->Disable isochronous endpoint support (seleccionar)
+    ->Devices drivers->USB Host Driver support->Mass Storage Class Support (seleccionar)
+    return to root
+ingresar en:
+    ->File Systems->Fat File System(seleccionar)
+    ->File Systems->Fat File System->Fat upper/lower names (seleccionar)
+    ->File Systems->Fat File System->Fat long files names (seleccionar)
+    return to root
+    
+esc & save
+
+~/nuttx-workspace/nuttx$ make
+
+~/openocd/gnu-mcu-eclipse/0.10.0-5-20171110-1117/bin$ ./openocd  -f ../scripts/board/stm32f4discovery.cfg -c init -c "reset halt" -c "flash write_image erase /home/santiago/nuttx-workspace/nuttx/nuttx.bin 0x08000000" -c "reset" -c "exit"
+
+Con lo anterior, abrimos sesión en putty, y por medio del conversor USB-RS232 TTL conectamos a la placa.
+
+en session de putty ingresamos los siguientes comandos:
+
+nsh> ls /dev  (dentro del listado debe figurar "sda" indicando que el pendrive fue detectado, si así no fuere revisar conexiones y formato del dispositivo (FAT32))
+nsh> mount -t vfat /dev/sda /mnt (montamos en dispositivo en mnt)
+nsh> ls /mnt (deberiamos ver el contenido del pendrive)
+
+Success!
+
+*********************************************************
+Tercer flasheo:
+Habilitar driver LCD ST7735
+NO REALIZAR MAKE DISTCLEAN
+*********************************************************
+
+~/nuttx-workspace/nuttx$ make menuconfig
+
+En menuconfig:
+
+ingresar en:
+    ->Devices drivers->SPI Driver Support->SPI CMD/DATA (seleccionar)
+    ->Devices drivers->Video Device Support (seleccionar)
+    ->Devices drivers->Video Device Support->FrameBuffer Character driver (seleccionar)
+    ->Devices drivers->LCD Driver Support->Graphic LCD Driver Support (seleccionar)
+    ->Devices drivers->LCD Driver Support->Graphic LCD Driver Support->LCD FrameBuffer front end (seleccionar)
+    ->Devices drivers->LCD Driver Support->Graphic LCD Driver Support->LCD Driver Selecction->ST7735 LCD Display Module (seleccionar)
+    return to root
+ingresar en:
+    ->Graphics Support->NX Graphics(seleccionar)
+    ->Graphics Support->Supported Pixel Depths->Disable 16 BPP (deseleccionar)
+    ->Graphics Support->Font Selections->Mono 5x8 (seleccionar)
+    ->Graphics Support->Font Cache Pixel Depths->Disable 16 BPP(deseleccionar)
+    return to root
+ingresar en:
+    ->Application configuration->Examples->FrameBuffer driver example (seleccionar)
+    return to root
+    
+esc & save
+
+~/nuttx-workspace/nuttx$ make
+
+~/openocd/gnu-mcu-eclipse/0.10.0-5-20171110-1117/bin$ ./openocd  -f ../scripts/board/stm32f4discovery.cfg -c init -c "reset halt" -c "flash write_image erase /home/santiago/nuttx-workspace/nuttx/nuttx.bin 0x08000000" -c "reset" -c "exit"
+
+Con lo anterior, abrimos sesión en putty, y por medio del conversor USB-RS232 TTL conectamos a la placa.
+
+en session de putty ingresamos los siguientes comandos:
+
+nsh> fb
+
+y se deberá visualizar en el display una serie de cuadros concentricos de distintos colores.
+
+Success!
+
+18/06/18:
+
+*********************************************************
+Primer flasheo:
+Habilitar Consola y Ethernet por USB
+*********************************************************
+
+en root de nuttx:
+~/nuttx-workspace/nuttx$ make distclean 
+~/nuttx-workspace/nuttx$ tools/configure.sh stm32f4discovery/nsh (para consola NSH por UART2 PA3,PA2)
+~/nuttx-workspace/nuttx$ make menuconfig
+
+En menuconfig:
+ingresar en:
+    ->Build Setup->Build Host Platform-> Linux (seleccionar)
+    return to root
+    
+ingresar en:
+    ->System Type->STM32 Peripheral Support-> OTG FS (seleccionar)
+    return to root
+ingresar en:    
+    ->RTOS Features->Work Queue support->High Prority (kernel) worker thread(seleccionar)
+    return o root
+ingresar en:
+    ->Networking support->Networking support (seleccionar)
+    ->Networking support->Link Layer Support->Local loopback (seleccionar)
+    ->Networking support->Socket support->Socket options (seleccionar)
+    ->Networking support->TCP/IP Networking (seleccionar)
+    ->Networking support->TCP/IP Networking->Enable TCP/IP write buffering (seleccionar)
+    ->Networking support->UDP Networking->UDP Networking (seleccionar)
+    ->Networking support->UDP Networking->UDP Networking->UDP Broadcast Rx Support (seleccionar)
+    ->Networking support->ICMP Networking Support->Enable ICMP Networking (seleccionar) (para que funcione el comando ping)
+    ->Networking support->ARP configuration->ARP Send (seleccionar)
+    ->Networking support->Collect Network Statistics (seleccionar)
+    return to root
+ingresar en:
+    ->Application configuration->Network Utilities->Telnet Daemon (seleccionar)
+    ->Application configuration->NSH library->Have architecture-specific initialization (seleccionar)
+    ->Application configuration->NSH library->Networking configuration->Network initialization thread
+    ->Application configuration->NSH library->Networking configuration->IP Address configuration->Target IPV4 address (direccion del dispositivo)
+    ->Application configuration->NSH library->Networking configuration->IP Address configuration->router IPV4 address
+    ->Application configuration->NSH library->Networking configuration->Hardware has no MAC Address (seleccionar)
+    ->Application configuration->NSH library->Telnet configuration->Use Telnet console (seleccionar)
+    return to root
+ingresar en:
+    ->Devices drivers->Network Device/PHY Support (seleccionar)
+    ->Devices drivers->Network Device/PHY Support->Telnet Driver (seleccionar)
+    ->Devices drivers->USB Device Driver Support (seleccionar)
+    ->Devices drivers->USB Device Driver Support->RNDIS Ethernet-over-USB (seleccionar)
+    return to root
+ingresar en:
+    ->Board Selection->Enable USB Device controls (seleccionar)
+    return to root
+    
+esc & save
+
+~/nuttx-workspace/nuttx$ make
+
+~/openocd/gnu-mcu-eclipse/0.10.0-5-20171110-1117/bin$ ./openocd  -f ../scripts/board/stm32f4discovery.cfg -c init -c "reset halt" -c "flash write_image erase /home/santiago/nuttx-workspace/nuttx/nuttx.bin 0x08000000" -c "reset" -c "exit"
+
+Con lo anterior, abrimos sesión en putty, y por medio del conversor USB-RS232 TTL conectamos a la placa.
+
+Luego desde linux 
+
+#ifconfig enp0s20u4u4 10.0.0.1 (enp0s20u4u4 es el ID que linux le da a la "tarjeta" detectada)
+
+Entonces podremos lanzar otra instancia de putty con protocolo Telnet y con IP 10.0.0.2 (default) y abriremos otra consola pero sobre Telnet.
+
+También desde linux podremos hacer: $ping 10.0.0.2 y la placa deberá constestar.
+
+Success!
+
+*********************************************************
+Habilitar RamDisk
+*********************************************************
+
+ingresar en:
+    ->Device Drivers->RAM Disk Support (seleccionar)
+    return to root
+ingresar en:
+    ->File Systems->Fat File System(seleccionar)
+    ->File Systems->Fat File System->Fat upper/lower names (seleccionar)
+    ->File Systems->Fat File System->Fat long files names (seleccionar)
+    return to root
+    
+esc & save
+
+~/nuttx-workspace/nuttx$ make
+
+~/openocd/gnu-mcu-eclipse/0.10.0-5-20171110-1117/bin$ ./openocd  -f ../scripts/board/stm32f4discovery.cfg -c init -c "reset halt" -c "flash write_image erase /home/santiago/nuttx-workspace/nuttx/nuttx.bin 0x08000000" -c "reset" -c "exit"
+
+Con lo anterior, abrimos sesión en putty, y por medio del conversor USB-RS232 TTL conectamos a la placa.
+
+nsh> mkrd 64
+nsh> mkfatfs /dev/ram0
+nsh> mount -t vfat /dev/ram0 /mnt
+    
+*********************************************************
+Habilitar SDIO (SD Card)
+*********************************************************
+    
+ingresar en:
+    ->System Type->STM32 Peripheral Support-> SDIO (seleccionar)
+    ->System Type->SDIO configuration->Enable Resistor Pull-Up (seleccionar)
+    return to root
+    
+ingresar en:    
+    ->RTOS Features->Work Queue support->High Prority (kernel) worker thread(seleccionar)
+    ->RTOS Features->RTOS Hooks->Custom board/driver initialization (seleccionar)
+    ->RTOS Features->RTOS Hooks->Board initialization thread (seleccionar)    
+    return o root
+
+ingresar en:    
+    ->Device Drivers->MMC/SD Driver Support (seleccionar)
+    ->Device Drivers->MMC/SD Driver Support->MMC/SD Write protect pin (deseleccionar)
+    ->Device Drivers->MMC/SD Driver Support->MMC/SD SPI transfer support (deseleccionar)
+    ->Device Drivers->MMC/SD Driver Support->MMC/SD SDIO transfer support (seleccionar)
+
+ingresar en:
+    ->File Systems->Fat File System(seleccionar)
+    ->File Systems->Fat File System->Fat upper/lower names (seleccionar)
+    ->File Systems->Fat File System->Fat long files names (seleccionar)
+    return to root
+    
+esc & save
+
+~/nuttx-workspace/nuttx$ make
+
+~/openocd/gnu-mcu-eclipse/0.10.0-5-20171110-1117/bin$ ./openocd  -f ../scripts/board/stm32f4discovery.cfg -c init -c "reset halt" -c "flash write_image erase /home/santiago/nuttx-workspace/nuttx/nuttx.bin 0x08000000" -c "reset" -c "exit"
+
+Con lo anterior, abrimos sesión en putty, y por medio del conversor USB-RS232 TTL conectamos a la placa.
+
+    
+
+
+
+    
+    
+    
+    
+
+
+    
+    
+    
+
+
+
+
+
